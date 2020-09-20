@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Simple 32-bit compiler for Windows (made in pure javascript)</title>
+        <script src="compiler .js"></script>
+    </head>
+    <body>
+        <textarea id="codeBox" rows="20" cols="90"></textarea>
+		<br />
+        <button id="compileButton">Compile</button>
+		<button id="resetButton">Reset</button>
+        <script>
+
+			// backticks wont do here due to tabs
+            const templateCode = 'var MB_YESNO_ICONINFORMATION = 68\n'+
+                                 'var globalCaption\n'+
+                                 '\n'+
+                                 'func show(message)\n'+
+                                 '    var MessageBox = import("user32.dll", "MessageBoxA")\n'+
+                                 '    var window = 0\n'+
+                                 '    var result = MessageBox(window, message, globalCaption, MB_YESNO_ICONINFORMATION)\n'+
+                                 'endfunc\n'+
+                                 '\n'+
+                                 'func main()\n'+
+                                 '    globalCaption = "Test Application"\n'+
+                                 '    var result = show("Hello World!")\n'+
+                                 'endfunc\n'+
+                                 '\n';
+
+            
+			function textareaHandler() {
+				const saveTextarea = () => localStorage.setItem("code", window.codeBox.value);
+				const loadTextarea = (newCode) => window.codeBox.value = newCode ?? localStorage.getItem("code") ?? templateCode;
+				const resetTextarea = () => {
+					loadTextarea(templateCode);
+					saveTextarea();
+				};
+
+				window.codeBox.addEventListener("input", saveTextarea);
+				window.resetButton.addEventListener("click", resetTextarea);
+				loadTextarea();
+
+				// -- enables usage of TAB key inside textarea
+				const enableTabKey = (event) => {
+					if (event.keyCode === 9) {
+						const textArea = event.target;
+						const cursorPosition = textArea.selectionStart;
+
+						textArea.value = textArea.value.substr(0, cursorPosition) + "  " + textArea.value.substr(cursorPosition);
+						textArea.selectionStart = textArea.selectionEnd = cursorPosition + 2;
+
+						event.preventDefault();
+					}
+				};
+
+				window.codeBox.addEventListener("keydown", enableTabKey);
+			}
+			textareaHandler();
+			
+			function compile() {
+                const text = window.codeBox.value;
+
+                let compiler = new Compiler();
+                if (!!compiler.Analize(text)) {
+                    let code = compiler.GenerateCode();
+                    if (code !== -1) {
+                        let f = new ByteFile();
+                        InsertMZHeader(f);
+                        InsertPEHeader(f, code);
+                        InsertCode(f, code);
+                        f.save("compiled.exe");
+                    }
+                }
+            }
+			window.compileButton.addEventListener("click", compile);
+
+        </script>
+    </body>
+</html>
